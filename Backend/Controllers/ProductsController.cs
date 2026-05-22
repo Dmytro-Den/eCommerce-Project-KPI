@@ -17,11 +17,26 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts([FromQuery] string sort = "")
+        public async Task<ActionResult<IEnumerable<Product>>> GetProducts(
+            [FromQuery] string category = "", 
+            [FromQuery] string search = "", 
+            [FromQuery] string sort = "")
         {
-            var productsList = await _context.Products.ToListAsync();
+            var query = _context.Products.AsQueryable();
 
-            if (sort == "")
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                query = query.Where(p => p.Category.ToLower() == category.ToLower());
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(p => p.Name.ToLower().Contains(search.ToLower()));
+            }
+
+            var productsList = await query.ToListAsync();
+
+            if (string.IsNullOrWhiteSpace(sort))
             {
                 return Ok(productsList);
             }
@@ -37,20 +52,14 @@ namespace WebApi.Controllers
 
                     if (sort.ToLower() == "asc")
                     {
-                        if (products[j].Price > products[j + 1].Price)
-                        {
-                            shouldSwap = true;
-                        }
+                        if (products[j].Price > products[j + 1].Price) shouldSwap = true;
                     }
                     else if (sort.ToLower() == "desc")
                     {
-                        if (products[j].Price < products[j + 1].Price)
-                        {
-                            shouldSwap = true;
-                        }
+                        if (products[j].Price < products[j + 1].Price) shouldSwap = true;
                     }
 
-                    if (shouldSwap == true)
+                    if (shouldSwap)
                     {
                         var temp = products[j];
                         products[j] = products[j + 1];
